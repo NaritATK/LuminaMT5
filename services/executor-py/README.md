@@ -15,6 +15,7 @@ python -m luminamt5_executor.worker
 - `REDIS_URL`
 - `COMMAND_QUEUE_KEY` (default: `luminamt5:commands`)
 - `API_BASE`
+- `API_KEY` or `API_BEARER_TOKEN` (for lifecycle reporting auth)
 - `ACCOUNT_ID`
 - `DRY_RUN=true|false` (default: `true`)
 - `IDEMPOTENCY_PREFIX` (default: `luminamt5:executor:idempotency`)

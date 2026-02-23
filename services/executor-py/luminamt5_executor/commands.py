@@ -26,7 +26,7 @@ class OpenOrderCommand(CommandBase):
     type: Literal["open"]
     symbol: str
     side: Literal["buy", "sell"]
-    volume: float
+    volume: float = Field(alias="size")
     sl: float | None = None
     tp: float | None = None
     comment: str | None = None

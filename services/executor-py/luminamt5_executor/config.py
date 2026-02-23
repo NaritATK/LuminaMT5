@@ -11,6 +11,8 @@ class Config(BaseModel):
     api_base: str = os.getenv("API_BASE", "http://localhost:3000")
     account_id: str = os.getenv("ACCOUNT_ID", "demo-account")
     dry_run: bool = os.getenv("DRY_RUN", "true").lower() == "true"
+    api_key: str | None = os.getenv("API_KEY")
+    api_bearer_token: str | None = os.getenv("API_BEARER_TOKEN")
     mt5_enable_live: bool = os.getenv("MT5_ENABLE_LIVE", "false").lower() == "true"
 
     idempotency_key_prefix: str = os.getenv("IDEMPOTENCY_PREFIX", "luminamt5:executor:idempotency")

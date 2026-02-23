@@ -32,6 +32,7 @@ Roles:
 RBAC defaults:
 
 - `/v1/commands` requires at least `operator`
+- `/v1/executor/lifecycle` requires at least `operator`
 - `panic` command requires `admin`
 
 Production safety default:
