@@ -7,6 +7,8 @@
   ],
   "scripts": {
     "dev:api": "npm --workspace @luminamt5/api run dev",
-    "build:api": "npm --workspace @luminamt5/api run build"
+    "build:api": "npm --workspace @luminamt5/api run build",
+    "dev:dashboard": "npm --workspace @luminamt5/dashboard run dev",
+    "build:dashboard": "npm --workspace @luminamt5/dashboard run build"
   }
 }
