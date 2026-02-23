@@ -12,5 +12,14 @@ class Config(BaseModel):
     account_id: str = os.getenv("ACCOUNT_ID", "demo-account")
     dry_run: bool = os.getenv("DRY_RUN", "true").lower() == "true"
 
+    idempotency_key_prefix: str = os.getenv("IDEMPOTENCY_PREFIX", "luminamt5:executor:idempotency")
+    idempotency_processing_ttl_sec: int = int(os.getenv("IDEMPOTENCY_PROCESSING_TTL_SEC", "120"))
+    idempotency_completed_ttl_sec: int = int(os.getenv("IDEMPOTENCY_COMPLETED_TTL_SEC", "604800"))
+
+    mt5_login: int | None = int(os.getenv("MT5_LOGIN")) if os.getenv("MT5_LOGIN") else None
+    mt5_password: str | None = os.getenv("MT5_PASSWORD")
+    mt5_server: str | None = os.getenv("MT5_SERVER")
+    mt5_terminal_path: str | None = os.getenv("MT5_TERMINAL_PATH")
+
 
 config = Config()

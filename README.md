@@ -28,6 +28,19 @@ Production-grade multi-account MT5 trading platform with chat control, risk engi
 - Circuit breaker
 - Global panic stop (`/panic`)
 
+## Running the Python executor worker
+
+```bash
+cd services/executor-py
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+python -m luminamt5_executor.worker
+```
+
+- Worker defaults to `DRY_RUN=true`.
+- Set `DRY_RUN=false` + MT5 credentials only when validating the live path in a controlled environment.
+
 ## Next Steps
 
 - Fill `.env` from `.env.example`

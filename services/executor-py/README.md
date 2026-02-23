@@ -3,6 +3,7 @@
 ## Quick start
 
 ```bash
+cd services/executor-py
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
@@ -15,21 +16,24 @@ python -m luminamt5_executor.worker
 - `COMMAND_QUEUE_KEY` (default: `luminamt5:commands`)
 - `API_BASE`
 - `ACCOUNT_ID`
-- `DRY_RUN=true|false`
+- `DRY_RUN=true|false` (default: `true`)
+- `IDEMPOTENCY_PREFIX` (default: `luminamt5:executor:idempotency`)
+- `IDEMPOTENCY_PROCESSING_TTL_SEC` (default: `120`)
+- `IDEMPOTENCY_COMPLETED_TTL_SEC` (default: `604800`)
 
-> Phase 1 runs in dry-run by default.
+### Optional live MT5 wiring (when `DRY_RUN=false`)
 
-## Backtest scaffold (30-day M5)
+- `MT5_LOGIN`
+- `MT5_PASSWORD`
+- `MT5_SERVER`
+- `MT5_TERMINAL_PATH`
 
-```bash
-# print schema
-python -m luminamt5_executor.backtest.cli --print-schema
+## Command contract notes
 
-# run scaffold using sample config
-python -m luminamt5_executor.backtest.cli --config backtest.example.json
+The worker now parses commands into structured models (`status`, `panic`, `open`) and computes idempotency keys using:
 
-# quick BTCUSD override
-python -m luminamt5_executor.backtest.cli --symbol BTCUSD --name btcusd-m5-30d-smoke
-```
+1. `idempotencyKey` (preferred)
+2. `commandId`
+3. SHA256 hash of raw payload (fallback)
 
-See `../../docs/backtest-30d-scaffold.md` for details.
+This allows safe requeue/retry behavior while keeping phase-1 dry-run as the default.
