@@ -1,4 +1,5 @@
 import type { TradingCommand } from '../types/commands.js'
+import { evaluateTenUsdRiskPolicy, isTenDollarAccount } from './strict-risk-policy.js'
 
 export interface RiskDecision {
   allowed: boolean
@@ -12,11 +13,9 @@ export function evaluateRisk(command: TradingCommand): RiskDecision {
     return { allowed: false, reason: 'invalid_order_payload' }
   }
 
-  // Placeholder for full rules:
-  // - max daily drawdown
-  // - max positions/account
-  // - spread/slippage guard
-  // - news blackout
-  // - circuit breaker
+  if (isTenDollarAccount(command)) {
+    return evaluateTenUsdRiskPolicy(command)
+  }
+
   return { allowed: true }
 }
