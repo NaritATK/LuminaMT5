@@ -1,0 +1,22 @@
+# Node
+node_modules/
+.pnpm-store/
+.next/
+dist/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Env
+.env
+.env.*
+!.env.example
+
+# OS
+.DS_Store
+
+# Logs
+logs/
+*.log
