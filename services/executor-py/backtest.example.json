@@ -1,5 +1,5 @@
 {
-  "name": "xauusd-m5-30d-smoke",
+  "name": "xauusd-m5-30d-baseline",
   "symbol": "XAUUSD",
   "timeframe": "M5",
   "days": 30,
@@ -7,6 +7,9 @@
   "risk_per_trade_pct": 0.5,
   "spread_points": 10,
   "slippage_points": 5,
-  "data_source": "mt5",
+  "start": "2026-01-01T00:00:00Z",
+  "end": "2026-01-31T00:00:00Z",
+  "data_source": "csv",
+  "csv_path": "./data/XAUUSD_M5.csv",
   "output_dir": "artifacts/backtests"
 }

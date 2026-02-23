@@ -41,6 +41,8 @@ Input is CSV OHLCV with header:
 
 `timestamp` must be ISO-8601 (`...Z` or timezone-aware string).
 
+> Note: backtest mode runs from CSV only and does not require live MT5 connectivity.
+
 ### Run
 
 ```bash

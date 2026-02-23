@@ -10,14 +10,13 @@ DEFAULT_SYMBOLS = ["XAUUSD", "BTCUSD"]
 
 
 class BacktestConfig(BaseModel):
-    """Config schema for a single 30-day backtest run scaffold."""
+    """Config schema for a single 30-day M5 CSV backtest run."""
 
     name: str = Field(default="m5-30d-baseline", min_length=3)
     symbol: str = Field(default="XAUUSD", description="Trading symbol")
     timeframe: Literal["M5"] = "M5"
     days: int = Field(default=30, ge=30, le=30)
 
-    # Capital/risk placeholders; implementation will consume these later.
     initial_balance: float = Field(default=10_000, gt=0)
     risk_per_trade_pct: float = Field(default=0.5, gt=0, le=5)
     spread_points: float = Field(default=10, ge=0)
@@ -26,7 +25,8 @@ class BacktestConfig(BaseModel):
     start: datetime | None = None
     end: datetime | None = None
 
-    data_source: str = Field(default="mt5", description="Source placeholder: mt5/csv/api")
+    data_source: Literal["csv"] = "csv"
+    csv_path: Path
     output_dir: Path = Field(default=Path("artifacts/backtests"))
 
     @field_validator("symbol")
