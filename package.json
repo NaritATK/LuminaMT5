@@ -1,0 +1,12 @@
+{
+  "name": "luminamt5",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev:api": "npm --workspace @luminamt5/api run dev",
+    "build:api": "npm --workspace @luminamt5/api run build"
+  }
+}

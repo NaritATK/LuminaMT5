@@ -1,9 +1,20 @@
 # Executor Worker (Python + MT5)
 
-Responsibilities:
-- consume execution commands
-- enforce local safety checks
-- place orders via MetaTrader5
-- report fills/status back to API
+## Quick start
 
-Status: scaffold
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+python -m luminamt5_executor.worker
+```
+
+## Environment
+
+- `REDIS_URL`
+- `COMMAND_QUEUE_KEY` (default: `luminamt5:commands`)
+- `API_BASE`
+- `ACCOUNT_ID`
+- `DRY_RUN=true|false`
+
+> Phase 1 runs in dry-run by default.
