@@ -38,7 +38,7 @@ export function evaluateTenUsdRiskPolicy(command: TradingCommand): { allowed: bo
     return { allowed: false, reason: 'missing_equity_balance_for_10usd_account' }
   }
 
-  const drawdownPct = ((command.accountBalanceUsd - command.accountEquityUsd) / command.accountBalanceUsd) * 100
+  const drawdownPct = Math.max(0, ((command.accountBalanceUsd - command.accountEquityUsd) / command.accountBalanceUsd) * 100)
   if (drawdownPct >= TEN_USD_POLICY.maxDailyDrawdownPct) {
     return { allowed: false, reason: 'daily_drawdown_cap_reached_for_10usd_account' }
   }

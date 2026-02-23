@@ -48,3 +48,8 @@ test('blocks when drawdown cap is reached for $10 account', () => {
   const result = evaluateRisk(baseOpenCommand({ accountEquityUsd: 9.5 }))
   assert.deepEqual(result, { allowed: false, reason: 'daily_drawdown_cap_reached_for_10usd_account' })
 })
+
+test('blocks when account state metrics are missing for $10 account', () => {
+  const result = evaluateRisk(baseOpenCommand({ tradesToday: undefined }))
+  assert.deepEqual(result, { allowed: false, reason: 'missing_trades_today_for_10usd_account' })
+})
