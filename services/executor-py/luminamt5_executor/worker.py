@@ -3,7 +3,7 @@ import time
 import redis
 from pydantic import ValidationError
 
-from .commands import OpenOrderCommand, PanicCommand, StatusCommand, UnknownCommand, parse_command, resolve_idempotency_key
+from .commands import CloseOrderCommand, OpenOrderCommand, PanicCommand, StatusCommand, UnknownCommand, parse_command, resolve_idempotency_key
 from .config import config
 from .idempotency import IdempotencyStore
 from .mt5_gateway import DryRunMT5Gateway, LiveMT5Gateway
@@ -12,6 +12,11 @@ from .mt5_gateway import DryRunMT5Gateway, LiveMT5Gateway
 def build_gateway():
     if config.dry_run:
         return DryRunMT5Gateway()
+
+    if not config.mt5_enable_live:
+        print("[worker] DRY-RUN forced: set MT5_ENABLE_LIVE=true to allow live gateway")
+        return DryRunMT5Gateway()
+
     return LiveMT5Gateway(
         login=config.mt5_login,
         password=config.mt5_password,
@@ -46,8 +51,15 @@ def handle_command(raw: str, idempotency: IdempotencyStore, gateway):
         if isinstance(command, OpenOrderCommand):
             result = gateway.open_order(command)
             if not result.ok:
-                raise RuntimeError(result.message)
+                raise RuntimeError(f"{result.error_code or 'EXECUTION_ERROR'}: {result.message}")
             idempotency.complete(idem_key, {"type": "open", "order_ref": result.order_ref})
+            return
+
+        if isinstance(command, CloseOrderCommand):
+            result = gateway.close_order(command)
+            if not result.ok:
+                raise RuntimeError(f"{result.error_code or 'EXECUTION_ERROR'}: {result.message}")
+            idempotency.complete(idem_key, {"type": "close", "order_ref": result.order_ref})
             return
 
         if isinstance(command, UnknownCommand):

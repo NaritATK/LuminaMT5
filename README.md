@@ -35,11 +35,31 @@ cd services/executor-py
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
+```
+
+Dry-run (default):
+
+```bash
+python -m luminamt5_executor.worker
+```
+
+Live-path validation (guarded):
+
+```bash
+export DRY_RUN=false
+export MT5_ENABLE_LIVE=true
+export MT5_LOGIN=<your_login>
+export MT5_PASSWORD='<your_password>'
+export MT5_SERVER='<your_server>'
+# optional:
+# export MT5_TERMINAL_PATH='/path/to/terminal64.exe'
+
 python -m luminamt5_executor.worker
 ```
 
 - Worker defaults to `DRY_RUN=true`.
-- Set `DRY_RUN=false` + MT5 credentials only when validating the live path in a controlled environment.
+- Live gateway is enabled only when both `DRY_RUN=false` and `MT5_ENABLE_LIVE=true`.
+- See `services/executor-py/README.md` for full env details.
 
 ## Next Steps
 

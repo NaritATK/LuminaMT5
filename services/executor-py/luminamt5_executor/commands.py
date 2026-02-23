@@ -32,12 +32,20 @@ class OpenOrderCommand(CommandBase):
     comment: str | None = None
 
 
+class CloseOrderCommand(CommandBase):
+    type: Literal["close"]
+    symbol: str
+    position_id: int | None = Field(default=None, alias="positionId")
+    volume: float | None = None
+    comment: str | None = None
+
+
 class UnknownCommand(CommandBase):
     type: Literal["unknown"] = "unknown"
     original_type: str | None = None
 
 
-Command = Union[StatusCommand, PanicCommand, OpenOrderCommand, UnknownCommand]
+Command = Union[StatusCommand, PanicCommand, OpenOrderCommand, CloseOrderCommand, UnknownCommand]
 
 
 def parse_command(raw: str) -> Command:
@@ -50,6 +58,8 @@ def parse_command(raw: str) -> Command:
         return PanicCommand.model_validate(payload)
     if command_type == "open":
         return OpenOrderCommand.model_validate(payload)
+    if command_type == "close":
+        return CloseOrderCommand.model_validate(payload)
 
     return UnknownCommand.model_validate({
         "type": "unknown",
