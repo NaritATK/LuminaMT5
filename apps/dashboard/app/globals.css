@@ -30,3 +30,19 @@ a { text-decoration: none; }
   padding: 1rem;
   margin-top: 1rem;
 }
+
+.notice {
+  padding: 0.5rem 0.625rem;
+  border-radius: 6px;
+  margin: 0.5rem 0 1rem;
+}
+
+.notice.ok {
+  border: 1px solid #2e7d323d;
+  background: #2e7d3214;
+}
+
+.notice.warning {
+  border: 1px solid #d977063d;
+  background: #d9770614;
+}

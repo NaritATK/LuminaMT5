@@ -4,11 +4,17 @@ Minimal operator UI scaffold for LuminaMT5.
 
 ## Routes
 
-- `/overview` — overview placeholder
-- `/risk` — risk placeholder
-- `/commands-audit` — command audit placeholder
+- `/overview` — overview API summary
+- `/risk` — risk API summary
+- `/commands-audit` — recent command activity API summary
 
-## API client stubs
+Each route includes:
+
+- loading UI (`loading.tsx`)
+- route-level error UI (`error.tsx`)
+- graceful fallback to local stub values if API is unavailable
+
+## API client
 
 `lib/api/client.ts` provides lightweight methods:
 
@@ -16,10 +22,18 @@ Minimal operator UI scaffold for LuminaMT5.
 - `getRisk()`
 - `getCommandsAudit()`
 
-By default, stubs are used. Set env to call backend APIs:
+Responses include `{ data, meta }`, where `meta.source` is either:
 
-- `NEXT_PUBLIC_USE_STUB_DATA=false`
-- `NEXT_PUBLIC_API_BASE_URL=http://localhost:3001`
+- `api` (live endpoint succeeded)
+- `fallback` (stub used due to config or request failure)
+
+## Environment
+
+- `NEXT_PUBLIC_USE_STUB_DATA` (default `true`; set `false` for live API)
+- `NEXT_PUBLIC_DASHBOARD_API_BASE_URL` (preferred API base URL)
+- `NEXT_PUBLIC_API_BASE_URL` (fallback base URL)
+- `NEXT_PUBLIC_DASHBOARD_API_PREFIX` (default `/v1`)
+- `NEXT_PUBLIC_DASHBOARD_API_TIMEOUT_MS` (default `5000`)
 
 ## Run
 
