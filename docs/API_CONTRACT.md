@@ -63,6 +63,22 @@ Response:
 - `403 blocked` when risk gate rejects
 - `400` on payload validation errors
 
+## POST /v1/ingress/telegram/webhook
+
+Telegram webhook ingress for slash commands.
+
+Security:
+- Verifies `X-Telegram-Bot-Api-Secret-Token` using `TELEGRAM_WEBHOOK_SECRET`
+- Timing-safe secret comparison
+- Startup fail-fast when `TELEGRAM_WEBHOOK_REQUIRE_SECRET=true` and secret is unset
+
+Behavior:
+- `202 ignored` for non-command messages
+- `400 invalid_webhook` for malformed Telegram payloads
+- `400 invalid_command` for unsupported/invalid slash commands
+- `403 blocked` when risk gate rejects
+- `202 accepted` when command is accepted and queued
+
 ## Lifecycle enums (DB-backed)
 
 To keep order/fill/position processing consistent across API + worker, the persistence layer now enforces these values:

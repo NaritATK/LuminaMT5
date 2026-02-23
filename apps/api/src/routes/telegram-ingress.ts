@@ -1,7 +1,9 @@
-import { randomUUID } from 'node:crypto'
-import type { FastifyInstance } from 'fastify'
+import { randomUUID, timingSafeEqual } from 'node:crypto'
+import type { FastifyInstance, FastifyRequest } from 'fastify'
 import { z } from 'zod'
 
+import { env } from '../utils/env.js'
+import { insertCommandRecord } from '../repositories/command-repository.js'
 import { enqueueCommand } from '../services/command-bus.js'
 import { evaluateRisk } from '../services/risk-gate.js'
 import type { TradingCommand } from '../types/commands.js'
@@ -40,6 +42,37 @@ type ParsedTelegramCommand = {
   tp?: number
 }
 
+function safeEqual(a: string, b: string): boolean {
+  const left = Buffer.from(a)
+  const right = Buffer.from(b)
+  if (left.length !== right.length) return false
+  return timingSafeEqual(left, right)
+}
+
+function hasValidSecret(req: FastifyRequest): boolean {
+  if (!env.TELEGRAM_WEBHOOK_SECRET) return !env.TELEGRAM_WEBHOOK_REQUIRE_SECRET
+
+  const received = req.headers['x-telegram-bot-api-secret-token']
+  if (typeof received !== 'string') return false
+
+  return safeEqual(received, env.TELEGRAM_WEBHOOK_SECRET)
+}
+
+function parseMaybeNumber(raw: string | undefined): number | undefined {
+  if (!raw) return undefined
+  const value = Number(raw)
+  return Number.isFinite(value) ? value : undefined
+}
+
+function parseOptions(parts: string[]): Record<string, string> {
+  return Object.fromEntries(
+    parts
+      .map((part) => part.split('='))
+      .filter(([k, v]) => Boolean(k && v))
+      .map(([k, v]) => [k.toLowerCase(), v])
+  )
+}
+
 function parseSlashCommand(text: string): { command?: ParsedTelegramCommand; issues: string[] } {
   const trimmed = text.trim()
   const [rawHead, ...rest] = trimmed.split(/\s+/)
@@ -53,35 +86,38 @@ function parseSlashCommand(text: string): { command?: ParsedTelegramCommand; iss
     }
 
     case '/open': {
-      const [symbolRaw, sideRaw, sizeRaw, ...optionalParts] = rest
+      const [symbolRaw, sideRaw, sizeRaw, ...tail] = rest
       if (!symbolRaw) issues.push('symbol_required')
 
       const side = sideRaw?.toLowerCase() as 'buy' | 'sell' | undefined
       if (!side || (side !== 'buy' && side !== 'sell')) issues.push('side_must_be_buy_or_sell')
 
-      const size = Number(sizeRaw)
-      if (!sizeRaw || Number.isNaN(size) || size <= 0) issues.push('size_must_be_positive_number')
+      const size = parseMaybeNumber(sizeRaw)
+      if (size == null || size <= 0) issues.push('size_must_be_positive_number')
 
-      const optionals = Object.fromEntries(
-        optionalParts
-          .map((part) => part.split('='))
-          .filter(([k, v]) => Boolean(k && v))
-          .map(([k, v]) => [k.toLowerCase(), v])
-      )
+      const positionalSl = parseMaybeNumber(tail[0]?.includes('=') ? undefined : tail[0])
+      const positionalTp = parseMaybeNumber(tail[1]?.includes('=') ? undefined : tail[1])
+      const kvOptions = parseOptions(tail)
 
-      const sl = optionals.sl ? Number(optionals.sl) : undefined
-      const tp = optionals.tp ? Number(optionals.tp) : undefined
-      if (optionals.sl && Number.isNaN(sl)) issues.push('sl_must_be_number')
-      if (optionals.tp && Number.isNaN(tp)) issues.push('tp_must_be_number')
+      const sl = parseMaybeNumber(kvOptions.sl) ?? positionalSl
+      const tp = parseMaybeNumber(kvOptions.tp) ?? positionalTp
+
+      if ((kvOptions.sl && sl == null) || (tail[0] && !tail[0].includes('=') && positionalSl == null)) {
+        issues.push('sl_must_be_number')
+      }
+
+      if ((kvOptions.tp && tp == null) || (tail[1] && !tail[1].includes('=') && positionalTp == null)) {
+        issues.push('tp_must_be_number')
+      }
 
       return {
         command: {
           type: 'open',
           symbol: symbolRaw?.toUpperCase(),
           side,
-          size: Number.isFinite(size) ? size : undefined,
-          sl: Number.isFinite(sl) ? sl : undefined,
-          tp: Number.isFinite(tp) ? tp : undefined
+          size,
+          sl,
+          tp
         },
         issues
       }
@@ -89,6 +125,7 @@ function parseSlashCommand(text: string): { command?: ParsedTelegramCommand; iss
 
     case '/close': {
       const [symbolRaw, accountId] = rest
+      if (!symbolRaw) issues.push('symbol_required')
       return {
         command: {
           type: 'close',
@@ -112,21 +149,26 @@ function parseSlashCommand(text: string): { command?: ParsedTelegramCommand; iss
 
 export function registerTelegramIngressRoutes(app: FastifyInstance) {
   app.post('/v1/ingress/telegram/webhook', async (req, reply) => {
+    if (!hasValidSecret(req)) {
+      req.log.warn('Rejected telegram webhook request due to invalid secret token')
+      return reply.status(401).send({ status: 'unauthorized' })
+    }
+
     const parsedWebhook = telegramWebhookSchema.safeParse(req.body)
     if (!parsedWebhook.success) {
-      return reply.status(400).send({
-        status: 'invalid_webhook',
-        validation: {
-          valid: false,
+      req.log.warn(
+        {
           issues: parsedWebhook.error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`)
-        }
-      })
+        },
+        'Rejected invalid telegram webhook payload'
+      )
+      return reply.status(400).send({ status: 'invalid_webhook' })
     }
 
     const webhook = parsedWebhook.data
     const message = webhook.message
 
-    if (!message || !message.text.startsWith('/')) {
+    if (!message || !message.text.trim().startsWith('/')) {
       return reply.status(202).send({ status: 'ignored', reason: 'non_command_message' })
     }
 
@@ -155,8 +197,7 @@ export function registerTelegramIngressRoutes(app: FastifyInstance) {
         validation: {
           valid: false,
           issues: commandParse.issues
-        },
-        audit: baseAudit
+        }
       })
     }
 
@@ -181,19 +222,26 @@ export function registerTelegramIngressRoutes(app: FastifyInstance) {
     const decision = evaluateRisk(command)
 
     if (!decision.allowed) {
+      await insertCommandRecord({
+        command,
+        decision: 'blocked',
+        decisionReason: decision.reason
+      })
+
       return reply.status(403).send({
         status: 'blocked',
-        reason: decision.reason,
-        validation: mappedPayload.validation,
-        audit: mappedPayload.audit
+        commandId: command.id,
+        reason: decision.reason
       })
     }
 
+    await insertCommandRecord({ command, decision: 'accepted' })
     await enqueueCommand(command)
 
     return reply.status(202).send({
       status: 'accepted',
-      command
+      commandId: command.id,
+      type: command.type
     })
   })
 }
