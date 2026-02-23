@@ -1,0 +1,12 @@
+{
+  "name": "xauusd-m5-30d-smoke",
+  "symbol": "XAUUSD",
+  "timeframe": "M5",
+  "days": 30,
+  "initial_balance": 10000,
+  "risk_per_trade_pct": 0.5,
+  "spread_points": 10,
+  "slippage_points": 5,
+  "data_source": "mt5",
+  "output_dir": "artifacts/backtests"
+}
