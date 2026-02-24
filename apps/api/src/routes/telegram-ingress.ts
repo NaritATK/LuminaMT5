@@ -147,6 +147,14 @@ function parseSlashCommand(text: string): { command?: ParsedTelegramCommand; iss
   }
 }
 
+function telegramReply(chatId: string | number, text: string) {
+  return {
+    method: 'sendMessage',
+    chat_id: chatId,
+    text
+  }
+}
+
 export function registerTelegramIngressRoutes(app: FastifyInstance) {
   app.post('/v1/ingress/telegram/webhook', async (req, reply) => {
     if (!hasValidSecret(req)) {
@@ -169,7 +177,7 @@ export function registerTelegramIngressRoutes(app: FastifyInstance) {
     const message = webhook.message
 
     if (!message || !message.text.trim().startsWith('/')) {
-      return reply.status(202).send({ status: 'ignored', reason: 'non_command_message' })
+      return reply.status(200).send({ status: 'ignored' })
     }
 
     const commandParse = parseSlashCommand(message.text)
@@ -192,13 +200,9 @@ export function registerTelegramIngressRoutes(app: FastifyInstance) {
     }
 
     if (!commandParse.command || commandParse.issues.length > 0) {
-      return reply.status(400).send({
-        status: 'invalid_command',
-        validation: {
-          valid: false,
-          issues: commandParse.issues
-        }
-      })
+      return reply.status(200).send(
+        telegramReply(message.chat.id, `❌ Invalid command: ${commandParse.issues.join(', ') || 'unknown_error'}`)
+      )
     }
 
     const mappedPayload: Omit<TradingCommand, 'id' | 'createdAt'> = {
@@ -219,29 +223,32 @@ export function registerTelegramIngressRoutes(app: FastifyInstance) {
       createdAt: receivedAt
     }
 
-    const decision = evaluateRisk(command)
+    try {
+      const decision = evaluateRisk(command)
 
-    if (!decision.allowed) {
-      await insertCommandRecord({
-        command,
-        decision: 'blocked',
-        decisionReason: decision.reason
-      })
+      if (!decision.allowed) {
+        await insertCommandRecord({
+          command,
+          decision: 'blocked',
+          decisionReason: decision.reason
+        })
 
-      return reply.status(403).send({
-        status: 'blocked',
-        commandId: command.id,
-        reason: decision.reason
-      })
+        return reply
+          .status(200)
+          .send(telegramReply(message.chat.id, `⛔ Command blocked (${decision.reason ?? 'risk_policy'})`))
+      }
+
+      await insertCommandRecord({ command, decision: 'accepted' })
+      await enqueueCommand(command)
+
+      return reply
+        .status(200)
+        .send(telegramReply(message.chat.id, `✅ Accepted: ${command.type} (${command.id.slice(0, 8)})`))
+    } catch (error) {
+      req.log.error({ error }, 'Failed processing telegram command')
+      return reply
+        .status(200)
+        .send(telegramReply(message.chat.id, '⚠️ Command received but backend is unavailable. Try again shortly.'))
     }
-
-    await insertCommandRecord({ command, decision: 'accepted' })
-    await enqueueCommand(command)
-
-    return reply.status(202).send({
-      status: 'accepted',
-      commandId: command.id,
-      type: command.type
-    })
   })
 }
